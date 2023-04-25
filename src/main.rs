@@ -1,8 +1,10 @@
 use std::{env, process::exit};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Node {
-    Character(char)
+    Character(char),
+    Group(Vec<Node>),
+    Dot
 }
 
 struct DFA {
@@ -13,14 +15,21 @@ struct DFA {
 
 impl DFA {
     fn new(regex: &str) -> Self {
-        let items = regex.chars().map(|c| {
+        let mut items = Vec::new();
+        let mut groups = Vec::new();
+        for c in regex.chars() {
             match c {
-                token if token.is_alphabetic() => {
-                    Node::Character(c)
+                '(' => groups.push(items.len()),
+                ')' => {
+                    let start = groups.pop().unwrap();
+                    let end = items.len();
+                    let group = items[start..end].to_vec();
+                    items.push(Node::Group(group))
                 },
-                _ => todo!()
-            }
-        }).collect();
+                '.' => items.push(Node::Dot),
+                _ => items.push(Node::Character(c))
+            };
+        }
 
         println!("{:#?}", items);
 
@@ -30,7 +39,9 @@ impl DFA {
     fn run(self, needle: &str) -> bool {
         self.items.iter().zip(needle.chars()).all(|(edge, character)| {
             match edge {
-                &Node::Character(c) => c == character
+                Node::Character(c) => *c == character,
+                Node::Dot => true,
+                _ => todo!()
             }
         })
     }
